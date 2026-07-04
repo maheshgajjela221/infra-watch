@@ -519,3 +519,4 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
           <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">
             Back to List
 
+
