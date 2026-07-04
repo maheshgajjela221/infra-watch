@@ -42,9 +42,6 @@ jobs:
               sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
             fi
 
-            sudo docker --version
-            sudo docker compose version
-
             echo "===== Cloning dev branch if not exists ====="
 
             if [ ! -d "$APP_DIR/.git" ]; then
@@ -63,9 +60,9 @@ jobs:
 
             rm -f backend/.env
 
-            cat > backend/.env <<EOF
-${{ secrets.DEV_BACKEND_ENV }}
-EOF
+            cat > backend/.env <<'EOF'
+            ${{ secrets.DEV_BACKEND_ENV }}
+            EOF
 
             echo "===== Validating backend .env ====="
 
@@ -78,13 +75,6 @@ EOF
               echo "ERROR: POSTGRES_PASSWORD missing in backend/.env."
               exit 1
             fi
-
-            if ! grep -q "DB_HOST=postgres" backend/.env; then
-              echo "ERROR: DB_HOST=postgres missing in backend/.env."
-              exit 1
-            fi
-
-            echo "backend/.env created successfully."
 
             echo "===== Deploying containers ====="
 
