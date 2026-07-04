@@ -29,11 +29,10 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [endpoint]);
 
   const filteredRows = useMemo(() => {
     const q = search.toLowerCase();
-
     if (!q) return rows;
 
     return rows.filter((row) =>
@@ -185,13 +184,17 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
         </div>
 
         {error && (
+          <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">
+            {error}
           </div>
         )}
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {fields.map((field) => (
             <label key={field.name} className="space-y-1">
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {field.label}
+              </span>
               {renderInput(field)}
             </label>
           ))}
@@ -199,61 +202,65 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
 
         <div className="mt-6 flex gap-3">
           <button className="btn-primary" type="submit">
+            {mode === 'edit' ? 'Update Record' : 'Create Record'}
           </button>
 
           <button
             className="btn-secondary"
+            type="button"
             onClick={() => setForm(editing || {})}
           >
+            Reset
           </button>
         </div>
       </form>
+    );
   }
 
   function DetailScreen() {
     if (!selected) return null;
 
     return (
-      <div className="space-y-6">
-        <div className="card p-6">
-          <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-              <h2 className="text-xl font-bold text-gray-900">
-                {title} Details
-              </h2>
-              <p className="text-sm text-gray-500">
-                Full details of selected record.
+      <div className="card p-6">
+        <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              {title} Details
+            </h2>
+            <p className="text-sm text-gray-500">
+              Full details of selected record.
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => startEdit(selected)}
+              className="btn-primary"
+            >
+              Edit
+            </button>
+
+            <button type="button" onClick={backToList} className="btn-secondary">
+              Back to List
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {fields.map((field) => (
+            <div
+              key={field.name}
+              className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {field.label}
+              </p>
+              <p className="mt-2 break-words text-sm font-semibold text-gray-900">
+                {selected[field.name] || '-'}
               </p>
             </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => startEdit(selected)}
-                className="btn-primary"
-              >
-                Edit
-              </button>
-
-              <button type="button" onClick={backToList} className="btn-secondary">
-                Back to List
-              </button>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {fields.map((field) => (
-              <div
-                key={field.name}
-                className="rounded-xl border border-gray-100 bg-gray-50 p-4"
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  {field.label}
-                </p>
-                <p className="mt-2 break-words text-sm font-semibold text-gray-900">
-                  {selected[field.name] || '-'}
-                </p>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       </div>
     );
@@ -295,8 +302,8 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
             {mode === 'list'
               ? `Manage ${title.toLowerCase()} records.`
               : mode === 'detail'
-                ? `View selected ${title.toLowerCase()} record.`
-                : `Create or update ${title.toLowerCase()} record.`}
+              ? `View selected ${title.toLowerCase()} record.`
+              : `Create or update ${title.toLowerCase()} record.`}
           </p>
         </div>
 
@@ -328,12 +335,4 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
       {mode === 'detail' && <DetailScreen />}
     </div>
   );
-}            </div>
-            <div>
-    );
-            Reset
-            type="button"
-            {mode === 'edit' ? 'Update Record' : 'Create Record'}
-              </span>
-          {fields.map((field) => (
-          <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">
+}
