@@ -19,7 +19,7 @@ export default function Sidebar() {
           <ShieldCheck size={24} />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">InfraWatch control</h1>
+          <h1 className="text-xl font-bold text-gray-900">InfraWatch controls control</h1>
           <p className="text-xs text-gray-500">Server Inventory Dashboard</p>
         </div>
       </div>
