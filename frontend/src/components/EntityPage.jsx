@@ -2,6 +2,225 @@ import { useEffect, useMemo, useState } from 'react';
 import api from '../services/api.js';
 import DataTable from './DataTable.jsx';
 
+function valueOrDash(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  return value;
+}
+
+function numberValue(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function ProgressBar({ label, value, suffix = '%' }) {
+  const percent = Math.max(0, Math.min(100, numberValue(value)));
+
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-semibold text-gray-600">{label}</p>
+        <p className="text-xl font-bold text-gray-900">
+          {percent.toFixed(0)}
+          {suffix}
+        </p>
+      </div>
+
+      <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
+        <div
+          className={`h-full rounded-full ${
+            percent >= 85
+              ? 'bg-red-500'
+              : percent >= 70
+                ? 'bg-amber-500'
+                : 'bg-indigo-600'
+          }`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+
+      <p className="mt-3 text-xs text-gray-500">
+        {percent >= 85
+          ? 'High usage. Please check server storage.'
+          : percent >= 70
+            ? 'Warning level usage.'
+            : 'Healthy usage.'}
+      </p>
+    </div>
+  );
+}
+
+function InfoCard({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+        {label}
+      </p>
+      <p className="mt-3 break-words text-base font-bold text-gray-900">
+        {valueOrDash(value)}
+      </p>
+    </div>
+  );
+}
+
+function SmallMetricCard({ label, value, helper }) {
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 p-5 shadow-sm">
+      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+        {label}
+      </p>
+      <p className="mt-3 text-2xl font-black text-gray-900">
+        {valueOrDash(value)}
+      </p>
+      {helper && <p className="mt-1 text-xs text-gray-500">{helper}</p>}
+    </div>
+  );
+}
+
+function ServerDetails({ server }) {
+  const diskPercent = numberValue(server.disk_used_percent);
+  const status = server.status || 'unknown';
+  const environment = server.environment || 'unknown';
+
+  return (
+    <div className="space-y-6">
+      <div className="overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 p-6 text-white shadow-lg">
+        <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-indigo-100">
+              Server Profile
+            </p>
+            <h2 className="mt-2 text-3xl font-black">
+              {valueOrDash(server.name)} Server
+            </h2>
+            <p className="mt-2 text-sm text-indigo-100">
+              {valueOrDash(server.provider)} • {valueOrDash(server.region)} •{' '}
+              {valueOrDash(server.public_ip)}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-bold backdrop-blur">
+              ENV: {environment}
+            </span>
+            <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-bold backdrop-blur">
+              STATUS: {status}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-4">
+        <SmallMetricCard
+          label="Public IP"
+          value={server.public_ip}
+          helper="Main reachable server IP"
+        />
+        <SmallMetricCard
+          label="Private IP"
+          value={server.private_ip}
+          helper="Internal network IP"
+        />
+        <SmallMetricCard
+          label="RAM"
+          value={
+            server.ram_total_gb
+              ? `${server.ram_total_gb} GB`
+              : '-'
+          }
+          helper="Total memory"
+        />
+        <SmallMetricCard
+          label="Disk Total"
+          value={
+            server.disk_total_gb
+              ? `${server.disk_total_gb} GB`
+              : '-'
+          }
+          helper="Total storage"
+        />
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <ProgressBar label="Disk Usage" value={diskPercent} />
+        </div>
+
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+            Storage Summary
+          </p>
+
+          <div className="mt-5 space-y-4">
+            <div className="flex justify-between border-b border-gray-100 pb-3">
+              <span className="text-sm text-gray-500">Used</span>
+              <span className="font-bold text-gray-900">
+                {server.disk_used_gb ? `${server.disk_used_gb} GB` : '-'}
+              </span>
+            </div>
+
+            <div className="flex justify-between border-b border-gray-100 pb-3">
+              <span className="text-sm text-gray-500">Free</span>
+              <span className="font-bold text-gray-900">
+                {server.disk_free_gb ? `${server.disk_free_gb} GB` : '-'}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-500">Usage</span>
+              <span className="font-bold text-gray-900">
+                {server.disk_used_percent ? `${server.disk_used_percent}%` : '-'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <InfoCard label="CPU Info" value={server.cpu_info} />
+        <InfoCard label="OS" value={server.os_name} />
+        <InfoCard label="SSH User" value={server.ssh_user} />
+        <InfoCard label="Project Path" value={server.project_path} />
+        <InfoCard label="Provider" value={server.provider} />
+        <InfoCard label="Region" value={server.region} />
+      </div>
+
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+          Notes
+        </p>
+        <p className="mt-3 whitespace-pre-wrap text-sm font-medium text-gray-800">
+          {valueOrDash(server.notes)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function GenericDetails({ title, fields, selected }) {
+  return (
+    <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+      <div className="mb-6">
+        <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+          Details
+        </p>
+        <h2 className="mt-1 text-2xl font-black text-gray-900">
+          {title} Record
+        </h2>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {fields.map((field) => (
+          <InfoCard
+            key={field.name}
+            label={field.label}
+            value={selected[field.name]}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function EntityPage({ title, endpoint, columns, fields }) {
   const [rows, setRows] = useState([]);
   const [form, setForm] = useState({});
@@ -177,24 +396,19 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
               Fill details and save. After saving, you will return to the list.
             </p>
           </div>
-
           <button type="button" onClick={backToList} className="btn-secondary">
-            Back to List
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">
             {error}
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {fields.map((field) => (
             <label key={field.name} className="space-y-1">
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {field.label}
-              </span>
               {renderInput(field)}
             </label>
           ))}
@@ -203,7 +417,6 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
         <div className="mt-6 flex gap-3">
           <button className="btn-primary" type="submit">
             {mode === 'edit' ? 'Update Record' : 'Create Record'}
-          </button>
 
           <button
             className="btn-secondary"
@@ -214,56 +427,16 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
           </button>
         </div>
       </form>
-    );
   }
 
   function DetailScreen() {
     if (!selected) return null;
 
-    return (
-      <div className="card p-6">
-        <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              {title} Details
-            </h2>
-            <p className="text-sm text-gray-500">
-              Full details of selected record.
-            </p>
-          </div>
+    if (title.toLowerCase() === 'servers') {
+      return <ServerDetails server={selected} />;
+    }
 
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => startEdit(selected)}
-              className="btn-primary"
-            >
-              Edit
-            </button>
-
-            <button type="button" onClick={backToList} className="btn-secondary">
-              Back to List
-            </button>
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {fields.map((field) => (
-            <div
-              key={field.name}
-              className="rounded-xl border border-gray-100 bg-gray-50 p-4"
-            >
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                {field.label}
-              </p>
-              <p className="mt-2 break-words text-sm font-semibold text-gray-900">
-                {selected[field.name] || '-'}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+    return <GenericDetails title={title} fields={fields} selected={selected} />;
   }
 
   function ListScreen() {
@@ -297,13 +470,17 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {mode === 'detail' && selected?.name
+              ? `${selected.name} Server`
+              : title}
+          </h1>
           <p className="text-sm text-gray-500">
             {mode === 'list'
               ? `Manage ${title.toLowerCase()} records.`
               : mode === 'detail'
-              ? `View selected ${title.toLowerCase()} record.`
-              : `Create or update ${title.toLowerCase()} record.`}
+                ? `Beautiful overview of selected ${title.toLowerCase()} record.`
+                : `Create or update ${title.toLowerCase()} record.`}
           </p>
         </div>
 
@@ -335,4 +512,10 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
       {mode === 'detail' && <DetailScreen />}
     </div>
   );
-}
+}    );
+          </button>
+              </span>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">
+            Back to List
+
