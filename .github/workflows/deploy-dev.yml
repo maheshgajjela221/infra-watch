@@ -30,17 +30,21 @@ jobs:
             sudo apt-get install -y git curl ca-certificates
 
             if ! command -v docker >/dev/null 2>&1; then
+              echo "Docker not found. Installing Docker..."
               curl -fsSL https://get.docker.com | sudo sh
               sudo systemctl enable docker
               sudo systemctl start docker
             fi
 
             if ! sudo docker compose version >/dev/null 2>&1; then
-              echo "Installing Docker Compose plugin manually..."
+              echo "Docker Compose plugin not found. Installing manually..."
               sudo mkdir -p /usr/local/lib/docker/cli-plugins
               sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
               sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
             fi
+
+            sudo docker --version
+            sudo docker compose version
 
             echo "===== Cloning dev branch if not exists ====="
 
@@ -50,7 +54,7 @@ jobs:
               git clone -b "$BRANCH" "$REPO_URL" infrawatch-dev
             fi
 
-            echo "===== Pulling latest code ====="
+            echo "===== Pulling latest dev code ====="
 
             cd "$APP_DIR"
             git fetch origin "$BRANCH"
@@ -59,10 +63,7 @@ jobs:
             echo "===== Creating backend .env from GitHub secret ====="
 
             rm -f backend/.env
-
-            cat > backend/.env <<'EOF'
-            ${{ secrets.DEV_BACKEND_ENV }}
-            EOF
+            printf '%s\n' "${{ secrets.DEV_BACKEND_ENV }}" > backend/.env
 
             echo "===== Validating backend .env ====="
 
@@ -76,12 +77,19 @@ jobs:
               exit 1
             fi
 
-            echo "===== Deploying containers ====="
+            if ! grep -q "DB_HOST=postgres" backend/.env; then
+              echo "ERROR: DB_HOST=postgres missing in backend/.env."
+              exit 1
+            fi
+
+            echo "backend/.env created successfully."
+
+            echo "===== Deploying InfraWatch dev containers ====="
 
             sudo docker compose -p infrawatch-dev down
             sudo docker compose -p infrawatch-dev up -d --build
 
-            echo "===== Cleaning old images ====="
+            echo "===== Cleaning old Docker images ====="
 
             sudo docker image prune -f
 
