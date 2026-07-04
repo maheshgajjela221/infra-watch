@@ -550,3 +550,4 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
     </div>
   );
 }
+
