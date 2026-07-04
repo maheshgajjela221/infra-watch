@@ -190,7 +190,13 @@ function ServerDetails({ server }) {
   );
 }
 
-function GenericDetails({ title, fields, selected }) {
+function GenericDetails({
+  title,
+  fields,
+  selected,
+  getFieldLabel,
+  getFieldValue,
+}) {
   return (
     <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
       <div className="mb-6">
@@ -206,8 +212,8 @@ function GenericDetails({ title, fields, selected }) {
         {fields.map((field) => (
           <InfoCard
             key={field.name}
-            label={field.label}
-            value={selected[field.name]}
+            label={getFieldLabel(field)}
+            value={getFieldValue(field, selected)}
           />
         ))}
       </div>
@@ -227,6 +233,47 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
 
+  function getServerLabel(serverId) {
+    const server = serverOptions.find(
+      (item) => Number(item.id) === Number(serverId)
+    );
+
+    if (!server) return serverId || '-';
+
+    return `${server.name} - ${server.public_ip || server.private_ip || 'No IP'}`;
+  }
+
+  function getFieldLabel(field) {
+    if (field.name === 'server_id') return 'Server';
+    return field.label;
+  }
+
+  function getFieldValue(field, row) {
+    if (field.name === 'server_id') {
+      return getServerLabel(row[field.name]);
+    }
+
+    return row[field.name];
+  }
+
+  function getDetailTitle() {
+    if (mode !== 'detail') return title;
+
+    if (title.toLowerCase() === 'servers' && selected?.name) {
+      return `${selected.name} Server`;
+    }
+
+    return (
+      selected?.name ||
+      selected?.cron_name ||
+      selected?.domain_name ||
+      selected?.service_name ||
+      selected?.deployment_name ||
+      selected?.alert_name ||
+      title
+    );
+  }
+
   async function load() {
     setLoading(true);
     setError('');
@@ -241,15 +288,6 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
     }
   }
 
-  useEffect(() => {
-    load();
-  }, [endpoint]);
-
- useEffect(() => {
-  const hasServerField = fields.some((field) => field.name === 'server_id');
-
-  if (!hasServerField) return;
-
   async function loadServers() {
     try {
       const res = await api.get('/servers');
@@ -259,9 +297,17 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
     }
   }
 
-  loadServers();
-}, [fields]);
-  
+  useEffect(() => {
+    load();
+  }, [endpoint]);
+
+  useEffect(() => {
+    const hasServerField = fields.some((field) => field.name === 'server_id');
+
+    if (hasServerField) {
+      loadServers();
+    }
+  }, [endpoint, fields]);
 
   const filteredRows = useMemo(() => {
     const q = search.toLowerCase();
@@ -272,6 +318,36 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
       JSON.stringify(row).toLowerCase().includes(q)
     );
   }, [rows, search]);
+
+  const displayColumns = useMemo(() => {
+    const hasServerField = fields.some((field) => field.name === 'server_id');
+    const hasServerColumn = columns.some((column) => column.key === 'server_id');
+
+    if (!hasServerField) {
+      return columns;
+    }
+
+    if (hasServerColumn) {
+      return columns.map((column) =>
+        column.key === 'server_id'
+          ? {
+              ...column,
+              label: 'Server',
+              render: (value) => getServerLabel(value),
+            }
+          : column
+      );
+    }
+
+    return [
+      {
+        key: 'server_id',
+        label: 'Server',
+        render: (value) => getServerLabel(value),
+      },
+      ...columns,
+    ];
+  }, [columns, fields, serverOptions]);
 
   function startCreate() {
     setError('');
@@ -357,23 +433,21 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
 
   function renderInput(field) {
     if (field.name === 'server_id') {
-  return (
-    <select
-      className="input"
-      value={form[field.name] || ''}
-      onChange={(e) => updateField(field.name, e.target.value, 'number')}
-    >
-      <option value="">Select Server</option>
-      {serverOptions.map((server) => (
-        <option key={server.id} value={server.id}>
-          {server.name} - {server.public_ip || server.private_ip || 'No IP'}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-
+      return (
+        <select
+          className="input"
+          value={form[field.name] || ''}
+          onChange={(e) => updateField(field.name, e.target.value, 'number')}
+        >
+          <option value="">Select Server</option>
+          {serverOptions.map((server) => (
+            <option key={server.id} value={server.id}>
+              {server.name} - {server.public_ip || server.private_ip || 'No IP'}
+            </option>
+          ))}
+        </select>
+      );
+    }
 
     if (field.type === 'textarea') {
       return (
@@ -393,7 +467,7 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
           onChange={(e) => updateField(field.name, e.target.value, field.type)}
         >
           <option value="">Select</option>
-          {field.options.map((option) => (
+          {(field.options || []).map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
@@ -429,28 +503,19 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
 
           <button type="button" onClick={backToList} className="btn-secondary">
             Back to List
-          </button>
-        </div>
 
         {error && (
           <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">
             {error}
-          </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {fields.map((field) => (
             <label key={field.name} className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                {field.name === 'server_id' ? 'Server' : field.label}
-              </span>
+                {getFieldLabel(field)}
               {renderInput(field)}
             </label>
-          ))}
         </div>
 
         <div className="mt-6 flex gap-3">
-          <button className="btn-primary" type="submit">
             {mode === 'edit' ? 'Update Record' : 'Create Record'}
           </button>
 
@@ -459,7 +524,6 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
             type="button"
             onClick={() => setForm(editing || {})}
           >
-            Reset
           </button>
         </div>
       </form>
@@ -473,7 +537,15 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
       return <ServerDetails server={selected} />;
     }
 
-    return <GenericDetails title={title} fields={fields} selected={selected} />;
+    return (
+      <GenericDetails
+        title={title}
+        fields={fields}
+        selected={selected}
+        getFieldLabel={getFieldLabel}
+        getFieldValue={getFieldValue}
+      />
+    );
   }
 
   function ListScreen() {
@@ -492,7 +564,7 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
           <div className="card p-6 text-gray-500">Loading...</div>
         ) : (
           <DataTable
-            columns={columns}
+            columns={displayColumns}
             rows={filteredRows}
             onView={startView}
             onEdit={startEdit}
@@ -508,9 +580,7 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {mode === 'detail' && selected?.name
-              ? `${selected.name} Server`
-              : title}
+            {getDetailTitle()}
           </h1>
           <p className="text-sm text-gray-500">
             {mode === 'list'
@@ -549,5 +619,13 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
       {mode === 'detail' && DetailScreen()}
     </div>
   );
-}
+}            Reset
+          <button className="btn-primary" type="submit">
+          ))}
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          {fields.map((field) => (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          </div>
+          </button>
 
