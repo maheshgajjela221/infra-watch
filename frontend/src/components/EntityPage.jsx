@@ -219,6 +219,7 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
   const [rows, setRows] = useState([]);
   const [form, setForm] = useState({});
   const [selected, setSelected] = useState(null);
+  const [serverOptions, setServerOptions] = useState([]);
   const [editing, setEditing] = useState(null);
   const [mode, setMode] = useState('list');
   const [error, setError] = useState('');
@@ -243,6 +244,24 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
   useEffect(() => {
     load();
   }, [endpoint]);
+
+ useEffect(() => {
+  const hasServerField = fields.some((field) => field.name === 'server_id');
+
+  if (!hasServerField) return;
+
+  async function loadServers() {
+    try {
+      const res = await api.get('/servers');
+      setServerOptions(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to load servers', err);
+    }
+  }
+
+  loadServers();
+}, [fields]);
+  
 
   const filteredRows = useMemo(() => {
     const q = search.toLowerCase();
@@ -337,6 +356,25 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
   }
 
   function renderInput(field) {
+    if (field.name === 'server_id') {
+  return (
+    <select
+      className="input"
+      value={form[field.name] || ''}
+      onChange={(e) => updateField(field.name, e.target.value, 'number')}
+    >
+      <option value="">Select Server</option>
+      {serverOptions.map((server) => (
+        <option key={server.id} value={server.id}>
+          {server.name} - {server.public_ip || server.private_ip || 'No IP'}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+
+
     if (field.type === 'textarea') {
       return (
         <textarea
@@ -404,7 +442,7 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
           {fields.map((field) => (
             <label key={field.name} className="space-y-1">
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                {field.label}
+                {field.name === 'server_id' ? 'Server' : field.label}
               </span>
               {renderInput(field)}
             </label>
