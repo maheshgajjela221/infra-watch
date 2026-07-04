@@ -78,7 +78,10 @@ jobs:
             echo "===== Creating backend .env from GitHub secret ====="
 
             rm -f backend/.env
-            printf '%s\n' "${{ secrets.DEV_BACKEND_ENV }}" > backend/.env
+
+            cat > backend/.env <<'ENVEOF'
+            ${{ secrets.DEV_BACKEND_ENV }}
+            ENVEOF
 
             echo "===== Validating backend .env ====="
 
@@ -102,7 +105,15 @@ jobs:
             echo "===== Deploying InfraWatch dev containers ====="
 
             sudo docker compose -p infrawatch-dev down
-            sudo docker compose -p infrawatch-dev up -d --build
+
+            echo "===== Building frontend without cache ====="
+            sudo docker compose -p infrawatch-dev build --no-cache frontend
+
+            echo "===== Building backend ====="
+            sudo docker compose -p infrawatch-dev build backend
+
+            echo "===== Starting containers ====="
+            sudo docker compose -p infrawatch-dev up -d
 
             echo "===== Cleaning old Docker images ====="
 
