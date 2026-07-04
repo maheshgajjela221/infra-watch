@@ -506,9 +506,9 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
         </div>
       )}
 
-      {mode === 'list' && <ListScreen />}
-      {(mode === 'create' || mode === 'edit') && <FormScreen />}
-      {mode === 'detail' && <DetailScreen />}
+      {mode === 'list' && ListScreen()}
+      {(mode === 'create' || mode === 'edit') && FormScreen()}
+      {mode === 'detail' && DetailScreen()}
     </div>
   );
 }
