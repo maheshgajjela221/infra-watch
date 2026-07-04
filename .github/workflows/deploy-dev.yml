@@ -24,12 +24,29 @@ jobs:
             REPO_URL="https://github.com/maheshgajjela221/infra-watch.git"
             BRANCH="dev"
 
+            echo "===== Installing required packages ====="
+
+            sudo apt-get update
+            sudo apt-get install -y git curl ca-certificates
+
             if ! command -v docker >/dev/null 2>&1; then
-              sudo apt-get update
-              sudo apt-get install -y docker.io docker-compose-plugin git
+              echo "Docker not found. Installing Docker..."
+              curl -fsSL https://get.docker.com | sudo sh
               sudo systemctl enable docker
               sudo systemctl start docker
             fi
+
+            if ! sudo docker compose version >/dev/null 2>&1; then
+              echo "Docker Compose plugin not found. Installing manually..."
+              sudo mkdir -p /usr/local/lib/docker/cli-plugins
+              sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+              sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+            fi
+
+            sudo docker --version
+            sudo docker compose version
+
+            echo "===== Cloning dev branch if not exists ====="
 
             if [ ! -d "$APP_DIR/.git" ]; then
               cd /home/ubuntu
@@ -37,15 +54,45 @@ jobs:
               git clone -b "$BRANCH" "$REPO_URL" infrawatch-dev
             fi
 
+            echo "===== Pulling latest dev code ====="
+
             cd "$APP_DIR"
             git fetch origin "$BRANCH"
             git reset --hard "origin/$BRANCH"
 
-            cat > backend/.env <<'EOF'
-            ${{ secrets.DEV_BACKEND_ENV }}
-            EOF
+            echo "===== Creating backend .env from GitHub secret ====="
+
+            rm -f backend/.env
+            printf '%s\n' "${{ secrets.DEV_BACKEND_ENV }}" > backend/.env
+
+            echo "===== Validating backend .env ====="
+
+            if [ ! -s backend/.env ]; then
+              echo "ERROR: backend/.env is empty. Check GitHub secret DEV_BACKEND_ENV."
+              exit 1
+            fi
+
+            if ! grep -q "POSTGRES_PASSWORD" backend/.env; then
+              echo "ERROR: POSTGRES_PASSWORD missing in backend/.env."
+              exit 1
+            fi
+
+            if ! grep -q "DB_HOST=postgres" backend/.env; then
+              echo "ERROR: DB_HOST=postgres missing in backend/.env."
+              exit 1
+            fi
+
+            echo "backend/.env created successfully."
+
+            echo "===== Deploying InfraWatch dev containers ====="
 
             sudo docker compose -p infrawatch-dev down
             sudo docker compose -p infrawatch-dev up -d --build
+
+            echo "===== Cleaning old Docker images ====="
+
             sudo docker image prune -f
+
+            echo "===== Deployment completed ====="
+
             sudo docker ps
