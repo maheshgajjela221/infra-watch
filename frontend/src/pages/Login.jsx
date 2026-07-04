@@ -29,7 +29,7 @@ export default function Login() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-indigo-600 text-white">
             <ShieldCheck size={32} />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">InfraWatch</h1>
+          <h1 className="text-3xl font-bold text-gray-900">InfraWatch control</h1>
           <p className="mt-2 text-sm text-gray-500">Login to manage server inventory</p>
         </div>
         {error && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">{error}</div>}
