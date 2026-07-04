@@ -1,0 +1,51 @@
+name: Deploy InfraWatch Dev
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy Dev Server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            APP_DIR="/home/ubuntu/infrawatch-dev"
+            REPO_URL="https://github.com/maheshgajjela221/infra-watch.git"
+            BRANCH="dev"
+
+            if ! command -v docker >/dev/null 2>&1; then
+              sudo apt-get update
+              sudo apt-get install -y docker.io docker-compose-plugin git
+              sudo systemctl enable docker
+              sudo systemctl start docker
+            fi
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              cd /home/ubuntu
+              sudo rm -rf infrawatch-dev
+              git clone -b "$BRANCH" "$REPO_URL" infrawatch-dev
+            fi
+
+            cd "$APP_DIR"
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+
+            cat > backend/.env <<'EOF'
+            ${{ secrets.DEV_BACKEND_ENV }}
+            EOF
+
+            sudo docker compose -p infrawatch-dev down
+            sudo docker compose -p infrawatch-dev up -d --build
+            sudo docker image prune -f
+            sudo docker ps
