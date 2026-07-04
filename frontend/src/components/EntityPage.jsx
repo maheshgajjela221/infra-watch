@@ -31,8 +31,8 @@ function ProgressBar({ label, value, suffix = '%' }) {
             percent >= 85
               ? 'bg-red-500'
               : percent >= 70
-                ? 'bg-amber-500'
-                : 'bg-indigo-600'
+              ? 'bg-amber-500'
+              : 'bg-indigo-600'
           }`}
           style={{ width: `${percent}%` }}
         />
@@ -42,8 +42,8 @@ function ProgressBar({ label, value, suffix = '%' }) {
         {percent >= 85
           ? 'High usage. Please check server storage.'
           : percent >= 70
-            ? 'Warning level usage.'
-            : 'Healthy usage.'}
+          ? 'Warning level usage.'
+          : 'Healthy usage.'}
       </p>
     </div>
   );
@@ -62,7 +62,7 @@ function InfoCard({ label, value }) {
   );
 }
 
-function SmallMetricCard({ label, value, helper }) {
+function MetricCard({ label, value, helper }) {
   return (
     <div className="rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 p-5 shadow-sm">
       <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
@@ -110,32 +110,24 @@ function ServerDetails({ server }) {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-4">
-        <SmallMetricCard
+        <MetricCard
           label="Public IP"
           value={server.public_ip}
           helper="Main reachable server IP"
         />
-        <SmallMetricCard
+        <MetricCard
           label="Private IP"
           value={server.private_ip}
           helper="Internal network IP"
         />
-        <SmallMetricCard
+        <MetricCard
           label="RAM"
-          value={
-            server.ram_total_gb
-              ? `${server.ram_total_gb} GB`
-              : '-'
-          }
+          value={server.ram_total_gb ? `${server.ram_total_gb} GB` : '-'}
           helper="Total memory"
         />
-        <SmallMetricCard
+        <MetricCard
           label="Disk Total"
-          value={
-            server.disk_total_gb
-              ? `${server.disk_total_gb} GB`
-              : '-'
-          }
+          value={server.disk_total_gb ? `${server.disk_total_gb} GB` : '-'}
           helper="Total storage"
         />
       </div>
@@ -168,7 +160,9 @@ function ServerDetails({ server }) {
             <div className="flex justify-between">
               <span className="text-sm text-gray-500">Usage</span>
               <span className="font-bold text-gray-900">
-                {server.disk_used_percent ? `${server.disk_used_percent}%` : '-'}
+                {server.disk_used_percent
+                  ? `${server.disk_used_percent}%`
+                  : '-'}
               </span>
             </div>
           </div>
@@ -226,7 +220,7 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
   const [form, setForm] = useState({});
   const [selected, setSelected] = useState(null);
   const [editing, setEditing] = useState(null);
-  const [mode, setMode] = useState('list'); // list | create | edit | detail
+  const [mode, setMode] = useState('list');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -252,6 +246,7 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
 
   const filteredRows = useMemo(() => {
     const q = search.toLowerCase();
+
     if (!q) return rows;
 
     return rows.filter((row) =>
@@ -337,12 +332,7 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
   }
 
   function updateField(name, value, type) {
-    let finalValue = value;
-
-    if (type === 'number') {
-      finalValue = value === '' ? '' : Number(value);
-    }
-
+    const finalValue = type === 'number' && value !== '' ? Number(value) : value;
     setForm({ ...form, [name]: finalValue });
   }
 
@@ -390,25 +380,32 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
         <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h2 className="text-xl font-bold text-gray-900">
-              {mode === 'edit' ? `Edit ${title} Record` : `Add New ${title} Record`}
+              {mode === 'edit'
+                ? `Edit ${title} Record`
+                : `Add New ${title} Record`}
             </h2>
             <p className="text-sm text-gray-500">
               Fill details and save. After saving, you will return to the list.
             </p>
           </div>
+
           <button type="button" onClick={backToList} className="btn-secondary">
+            Back to List
           </button>
         </div>
 
         {error && (
+          <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">
             {error}
           </div>
         )}
 
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {fields.map((field) => (
             <label key={field.name} className="space-y-1">
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {field.label}
+              </span>
               {renderInput(field)}
             </label>
           ))}
@@ -417,6 +414,7 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
         <div className="mt-6 flex gap-3">
           <button className="btn-primary" type="submit">
             {mode === 'edit' ? 'Update Record' : 'Create Record'}
+          </button>
 
           <button
             className="btn-secondary"
@@ -427,6 +425,7 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
           </button>
         </div>
       </form>
+    );
   }
 
   function DetailScreen() {
@@ -479,8 +478,8 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
             {mode === 'list'
               ? `Manage ${title.toLowerCase()} records.`
               : mode === 'detail'
-                ? `Beautiful overview of selected ${title.toLowerCase()} record.`
-                : `Create or update ${title.toLowerCase()} record.`}
+              ? `Beautiful overview of selected ${title.toLowerCase()} record.`
+              : `Create or update ${title.toLowerCase()} record.`}
           </p>
         </div>
 
@@ -512,11 +511,4 @@ export default function EntityPage({ title, endpoint, columns, fields }) {
       {mode === 'detail' && <DetailScreen />}
     </div>
   );
-}    );
-          </button>
-              </span>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">
-            Back to List
-
-
+}
